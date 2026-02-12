@@ -40,8 +40,8 @@ export default function MainLayout() {
       >
         <div
           className={cn(
-            "h-16 flex items-center border-b border-gray-100",
-            isSidebarCollapsed ? "px-3 justify-center" : "px-4 justify-between"
+            "flex border-b border-gray-100",
+            isSidebarCollapsed ? "h-20 flex-col items-center justify-center gap-2 px-2" : "h-16 items-center justify-between px-4"
           )}
         >
           <span className="text-xl font-extrabold text-gray-900 tracking-tight">
@@ -57,10 +57,7 @@ export default function MainLayout() {
           <button
             type="button"
             onClick={() => setSidebarCollapsed((prev) => !prev)}
-            className={cn(
-              "h-8 w-8 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700",
-              isSidebarCollapsed ? "absolute" : ""
-            )}
+            className="h-8 w-8 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
             aria-label={isSidebarCollapsed ? "사이드바 펼치기" : "사이드바 축소"}
           >
             {isSidebarCollapsed ? <ChevronRight className="mx-auto h-4 w-4" /> : <ChevronLeft className="mx-auto h-4 w-4" />}

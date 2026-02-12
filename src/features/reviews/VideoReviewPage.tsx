@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
@@ -19,11 +19,76 @@ export default function VideoReviewPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [workingId, setWorkingId] = useState<number | null>(null);
-  const [openedReasonShortsId, setOpenedReasonShortsId] = useState<number | null>(null);
+  const [reasonModalItem, setReasonModalItem] = useState<ShortsReviewItem | null>(null);
+  const [videoModalItem, setVideoModalItem] = useState<ShortsReviewItem | null>(null);
+  const [videoPlaybackRate, setVideoPlaybackRate] = useState(1);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const videoModalIndex = useMemo(() => {
+    if (!videoModalItem) {
+      return -1;
+    }
+    return items.findIndex((item) => item.shortsId === videoModalItem.shortsId);
+  }, [items, videoModalItem]);
 
   useEffect(() => {
     void loadItems();
   }, [statusFilter, page]);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setReasonModalItem(null);
+        setVideoModalItem(null);
+        return;
+      }
+
+      if (!videoModalItem) {
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveVideoModal("prev");
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveVideoModal("next");
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [videoModalItem, videoModalIndex, items]);
+
+  useEffect(() => {
+    if (!videoRef.current) {
+      return;
+    }
+    videoRef.current.playbackRate = videoPlaybackRate;
+  }, [videoPlaybackRate, videoModalItem]);
+
+  const openVideoModal = (item: ShortsReviewItem) => {
+    setVideoPlaybackRate(1);
+    setVideoModalItem(item);
+  };
+
+  const moveVideoModal = (direction: "prev" | "next") => {
+    if (videoModalIndex < 0) {
+      return;
+    }
+
+    const nextIndex = direction === "prev" ? videoModalIndex - 1 : videoModalIndex + 1;
+    if (nextIndex < 0 || nextIndex >= items.length) {
+      return;
+    }
+
+    setVideoPlaybackRate(1);
+    setVideoModalItem(items[nextIndex]);
+  };
 
   const loadItems = async () => {
     try {
@@ -110,19 +175,19 @@ export default function VideoReviewPage() {
           <CardTitle>검수 요청 목록</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="min-w-[1120px] w-full divide-y divide-gray-200">
+          <div className="overflow-hidden rounded-md border border-gray-200">
+            <table className="w-full table-fixed divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">쇼츠ID</th>
-                  <th className="min-w-[220px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">영상</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 결과</th>
-                  <th className="min-w-[260px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 검수 사유</th>
-                  <th className="w-[11%] whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록 시각</th>
-                  <th className="w-[10%] whitespace-nowrap px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
+                  <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">쇼츠ID</th>
+                  <th className="w-[20%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
+                  <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">영상</th>
+                  <th className="w-[11%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
+                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                  <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 결과</th>
+                  <th className="w-[11%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">검수사유</th>
+                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록 시각</th>
+                  <th className="w-[6%] px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
@@ -137,64 +202,56 @@ export default function VideoReviewPage() {
                 ) : (
                   items.map((item) => {
                     const hasInspectionResult = Boolean(item.inspectionResult);
-                    const isReasonOpened = openedReasonShortsId === item.shortsId;
 
                     return (
                       <tr key={item.shortsId} className="hover:bg-gray-50 align-top">
-                        <td className="px-4 py-3 text-sm text-gray-700">{item.shortsId}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        <td className="px-3 py-3 text-sm text-gray-700">{item.shortsId}</td>
+                        <td className="px-3 py-3 text-sm font-medium text-gray-900">
                           <p className="truncate" title={item.title}>{item.title}</p>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                        <td className="px-3 py-3 text-sm text-gray-700">
                           {item.videoUrl ? (
-                            <a
-                              href={item.videoUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex h-8 items-center rounded-md border border-gray-300 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="whitespace-nowrap"
+                              onClick={() => openVideoModal(item)}
                             >
                               영상 보기
-                            </a>
+                            </Button>
                           ) : (
                             "-"
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{item.authorName ?? "-"}</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm">
+                        <td className="px-3 py-3 text-sm text-gray-700">{item.authorName ?? "-"}</td>
+                        <td className="px-3 py-3 text-sm">
                           <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                        <td className="px-3 py-3 text-sm text-gray-700">
                           {hasInspectionResult
                             ? `${item.inspectionResult?.category ?? "-"} (${((item.inspectionResult?.confidenceScore ?? 0) * 100).toFixed(1)}%)`
                             : "검수 대기"}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
+                        <td className="px-3 py-3 text-sm text-gray-700">
                           {hasInspectionResult ? (
-                            <div className="space-y-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="whitespace-nowrap"
-                                onClick={() => setOpenedReasonShortsId(isReasonOpened ? null : item.shortsId)}
-                              >
-                                {isReasonOpened ? "사유 닫기" : "사유 보기"}
-                              </Button>
-                              {isReasonOpened ? (
-                                <p className="max-w-full whitespace-pre-wrap break-words rounded-md bg-gray-50 px-3 py-2 text-xs leading-5 text-gray-700">
-                                  {item.inspectionResult?.reason ?? "검수 사유가 없습니다."}
-                                </p>
-                              ) : null}
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="whitespace-nowrap"
+                              onClick={() => setReasonModalItem(item)}
+                            >
+                              사유 보기
+                            </Button>
                           ) : (
                             <span className="text-xs text-gray-400">AI 검수 완료 후 확인 가능</span>
                           )}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{formatDate(item.createdAt)}</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          <div className="inline-flex flex-col gap-2 whitespace-nowrap lg:flex-row">
+                        <td className="px-3 py-3 text-sm text-gray-700">{formatDate(item.createdAt)}</td>
+                        <td className="px-3 py-3 text-right">
+                          <div className="inline-flex flex-wrap justify-end gap-2">
                             <Button
                               size="sm"
-                              className="min-w-[56px] whitespace-nowrap"
+                              className="min-w-[52px] whitespace-nowrap"
                               disabled={!hasInspectionResult || workingId === item.shortsId}
                               onClick={() => void handleStatusUpdate(item.shortsId, "PUBLISHED")}
                             >
@@ -203,7 +260,7 @@ export default function VideoReviewPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="min-w-[56px] whitespace-nowrap"
+                              className="min-w-[52px] whitespace-nowrap"
                               disabled={!hasInspectionResult || workingId === item.shortsId}
                               onClick={() => void handleStatusUpdate(item.shortsId, "REJECT")}
                             >
@@ -238,6 +295,137 @@ export default function VideoReviewPage() {
           </div>
         </CardContent>
       </Card>
+
+      {reasonModalItem ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setReasonModalItem(null)}
+        >
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">AI 검수</p>
+                <h2 className="mt-1 text-lg font-semibold text-gray-900">검수 사유 상세</h2>
+                <p className="mt-1 text-xs text-gray-500">쇼츠ID {reasonModalItem.shortsId}</p>
+              </div>
+              <button
+                type="button"
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                onClick={() => setReasonModalItem(null)}
+                aria-label="검수 사유 팝업 닫기"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="space-y-3 px-6 py-5">
+              <p className="rounded-md bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900">{reasonModalItem.title}</p>
+              <p className="max-h-[50vh] overflow-y-auto whitespace-pre-wrap break-words rounded-md border border-gray-200 bg-gray-50 px-4 py-4 text-sm leading-6 text-gray-700">
+                {reasonModalItem.inspectionResult?.reason ?? "검수 사유가 없습니다."}
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+              <Button variant="outline" onClick={() => setReasonModalItem(null)}>
+                나가기
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {videoModalItem ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/55 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setVideoModalItem(null)}
+        >
+          <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">영상 미리보기</p>
+                <h2 className="mt-1 text-lg font-semibold text-gray-900">{videoModalItem.title}</h2>
+                <p className="mt-1 text-xs text-gray-500">쇼츠ID {videoModalItem.shortsId}</p>
+              </div>
+              <button
+                type="button"
+                className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                onClick={() => setVideoModalItem(null)}
+                aria-label="영상 미리보기 팝업 닫기"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="px-6 py-5">
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-black">
+                <video
+                  ref={videoRef}
+                  key={videoModalItem.videoUrl}
+                  className="max-h-[70vh] w-full"
+                  controls
+                  playsInline
+                  src={videoModalItem.videoUrl ?? undefined}
+                />
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500">재생속도</span>
+                  {[1, 1.25, 1.5].map((rate) => (
+                    <button
+                      key={rate}
+                      type="button"
+                      className={
+                        videoPlaybackRate === rate
+                          ? "rounded-md border border-primary bg-primary px-2.5 py-1 text-xs font-semibold text-white"
+                          : "rounded-md border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                      }
+                      onClick={() => setVideoPlaybackRate(rate)}
+                    >
+                      {rate.toFixed(2).replace(/\.00$/, "")}x
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={videoModalIndex <= 0} onClick={() => moveVideoModal("prev")}>
+                    이전 영상
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={videoModalIndex < 0 || videoModalIndex >= items.length - 1}
+                    onClick={() => moveVideoModal("next")}
+                  >
+                    다음 영상
+                  </Button>
+                </div>
+              </div>
+
+              {videoModalItem.videoUrl ? (
+                <a
+                  href={videoModalItem.videoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex text-sm font-medium text-primary hover:text-primary-dark"
+                >
+                  새 탭에서 원본 영상 열기
+                </a>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end border-t border-gray-200 px-6 py-4">
+              <Button variant="outline" onClick={() => setVideoModalItem(null)}>
+                나가기
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
