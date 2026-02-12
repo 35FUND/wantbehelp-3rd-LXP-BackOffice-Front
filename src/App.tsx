@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import type { ReactElement } from "react";
 import MainLayout from "./layouts/MainLayout";
 import DashboardPage from "./features/dashboard/DashboardPage";
 import UserListPage from "./features/users/list/UserListPage";
@@ -8,29 +7,13 @@ import VideoReviewPage from "./features/reviews/VideoReviewPage";
 import CommentReportPage from "./features/comments/CommentReportPage";
 import LoginPage from "./features/auth/LoginPage";
 
-function RequireAuth({ children }: { children: ReactElement }) {
-  const accessToken = localStorage.getItem("accessToken");
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
-  return children;
-}
-
-function GuestOnly({ children }: { children: ReactElement }) {
-  const accessToken = localStorage.getItem("accessToken");
-  if (accessToken) {
-    return <Navigate to="/" replace />;
-  }
-  return children;
-}
-
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
+        <Route path="/login" element={<LoginPage />} />
 
-        <Route path="/" element={<RequireAuth><MainLayout /></RequireAuth>}>
+        <Route path="/" element={<MainLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="users" element={<UserListPage />} />
           <Route path="contents" element={<ContentManagementPage />} />
