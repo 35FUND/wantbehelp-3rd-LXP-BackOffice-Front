@@ -111,27 +111,28 @@ export default function VideoReviewPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed divide-y divide-gray-200">
+            <table className="min-w-[1120px] w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">쇼츠ID</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
-                  <th className="w-[10%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                  <th className="w-[12%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 결과</th>
-                  <th className="w-[32%] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 검수 사유</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">쇼츠ID</th>
+                  <th className="min-w-[220px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">영상</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 결과</th>
+                  <th className="min-w-[260px] px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 검수 사유</th>
                   <th className="w-[11%] whitespace-nowrap px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록 시각</th>
-                  <th className="w-[13%] whitespace-nowrap px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
+                  <th className="w-[10%] whitespace-nowrap px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-3 text-center text-sm text-gray-500">로딩 중...</td>
+                    <td colSpan={9} className="px-4 py-3 text-center text-sm text-gray-500">로딩 중...</td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-3 text-center text-sm text-gray-500">검수 대상이 없습니다.</td>
+                    <td colSpan={9} className="px-4 py-3 text-center text-sm text-gray-500">검수 대상이 없습니다.</td>
                   </tr>
                 ) : (
                   items.map((item) => {
@@ -141,7 +142,23 @@ export default function VideoReviewPage() {
                     return (
                       <tr key={item.shortsId} className="hover:bg-gray-50 align-top">
                         <td className="px-4 py-3 text-sm text-gray-700">{item.shortsId}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.title}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          <p className="truncate" title={item.title}>{item.title}</p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                          {item.videoUrl ? (
+                            <a
+                              href={item.videoUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex h-8 items-center rounded-md border border-gray-300 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                              영상 보기
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-700">{item.authorName ?? "-"}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
                           <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
