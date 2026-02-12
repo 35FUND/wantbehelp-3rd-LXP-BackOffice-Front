@@ -184,6 +184,7 @@ export default function VideoReviewPage() {
                   <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">영상</th>
                   <th className="w-[11%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
                   <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                  <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태 설명</th>
                   <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 결과</th>
                   <th className="w-[11%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">검수사유</th>
                   <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록 시각</th>
@@ -193,11 +194,11 @@ export default function VideoReviewPage() {
               <tbody className="divide-y divide-gray-100 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-3 text-center text-sm text-gray-500">로딩 중...</td>
+                    <td colSpan={10} className="px-4 py-3 text-center text-sm text-gray-500">로딩 중...</td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-3 text-center text-sm text-gray-500">검수 대상이 없습니다.</td>
+                    <td colSpan={10} className="px-4 py-3 text-center text-sm text-gray-500">검수 대상이 없습니다.</td>
                   </tr>
                 ) : (
                   items.map((item) => {
@@ -226,6 +227,11 @@ export default function VideoReviewPage() {
                         <td className="px-3 py-3 text-sm text-gray-700">{item.authorName ?? "-"}</td>
                         <td className="px-3 py-3 text-sm">
                           <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                        </td>
+                        <td className="px-3 py-3 text-sm text-gray-700">
+                          <p className="break-words" title={item.shortsStatusDescription ?? "-"}>
+                            {item.shortsStatusDescription ?? "-"}
+                          </p>
                         </td>
                         <td className="px-3 py-3 text-sm text-gray-700">
                           {hasInspectionResult

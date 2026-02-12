@@ -26,6 +26,7 @@ export interface ShortsReviewItem {
   categoryId: number;
   title: string;
   status: ShortsStatus;
+  shortsStatusDescription: string;
   videoUrl: string | null;
   createdAt: string;
   inspectionResult: ShortsInspectionResult | null;
