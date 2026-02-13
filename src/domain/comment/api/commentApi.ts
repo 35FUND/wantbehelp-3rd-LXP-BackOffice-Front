@@ -1,6 +1,6 @@
 import { httpClient } from "../../../global/config/httpClient";
 import type { ApiResponse } from "../../../global/common/types/apiResponse";
-import type { CommentReport, CommentReportPage, ReportStatus } from "../model/commentTypes";
+import type { CommentDeleteReason, CommentReport, CommentReportPage, ReportStatus } from "../model/commentTypes";
 
 export interface CommentReportSearchParams {
   status?: ReportStatus;
@@ -42,6 +42,6 @@ export async function processCommentReport(reportId: number): Promise<void> {
   await httpClient.patch<ApiResponse<null>>(`/api/v1/backoffice/comment-reports/${reportId}/process`);
 }
 
-export async function rejectCommentReport(reportId: number): Promise<void> {
-  await httpClient.patch<ApiResponse<null>>(`/api/v1/backoffice/comment-reports/${reportId}/reject`);
+export async function deleteCommentReport(reportId: number, reason: CommentDeleteReason): Promise<void> {
+  await httpClient.patch<ApiResponse<null>>(`/api/v1/backoffice/comment-reports/${reportId}/delete`, { reason });
 }

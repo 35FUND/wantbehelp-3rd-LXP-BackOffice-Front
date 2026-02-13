@@ -4,6 +4,7 @@ import type {
   CategoryItem,
   KeywordItem,
   ShortsReviewPage,
+  ShortsRejectReason,
   ShortsStatus,
   InspectionTriggerResult,
   ShortsInspectionResult,
@@ -68,8 +69,12 @@ export async function triggerShortsInspection(shortsId: number): Promise<Inspect
   return response.data.data;
 }
 
-export async function updateShortsStatus(shortsId: number, status: ShortsStatus): Promise<void> {
-  await httpClient.patch<ApiResponse<null>>(`/api/v1/backoffice/shorts/reviews/${shortsId}/status`, { status });
+export async function updateShortsStatus(
+  shortsId: number,
+  status: ShortsStatus,
+  rejectReason?: ShortsRejectReason
+): Promise<void> {
+  await httpClient.patch<ApiResponse<null>>(`/api/v1/backoffice/shorts/reviews/${shortsId}/status`, { status, rejectReason });
 }
 
 export async function getShortsInspectionResult(shortsId: number): Promise<ShortsInspectionResult> {

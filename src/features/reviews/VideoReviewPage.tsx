@@ -6,9 +6,16 @@ import {
   getShortsReviewPage,
   updateShortsStatus,
 } from "../../domain/content/api/contentApi";
-import type { ShortsReviewItem, ShortsStatus } from "../../domain/content/model/contentTypes";
+import type { ShortsRejectReason, ShortsReviewItem, ShortsStatus } from "../../domain/content/model/contentTypes";
 
 const PAGE_SIZE = 20;
+const REJECT_REASON_OPTIONS: { value: ShortsRejectReason; label: string }[] = [
+  { value: "POLICY_VIOLATION", label: "운영정책 위반" },
+  { value: "COPYRIGHT", label: "저작권 침해 우려" },
+  { value: "SPAM", label: "도배/광고성 콘텐츠" },
+  { value: "LOW_QUALITY", label: "저화질/품질 미달" },
+  { value: "ETC", label: "기타" },
+];
 
 export default function VideoReviewPage() {
   const [items, setItems] = useState<ShortsReviewItem[]>([]);
@@ -20,6 +27,8 @@ export default function VideoReviewPage() {
   const [totalElements, setTotalElements] = useState(0);
   const [workingId, setWorkingId] = useState<number | null>(null);
   const [reasonModalItem, setReasonModalItem] = useState<ShortsReviewItem | null>(null);
+  const [rejectModalItem, setRejectModalItem] = useState<ShortsReviewItem | null>(null);
+  const [rejectReason, setRejectReason] = useState<ShortsRejectReason>("POLICY_VIOLATION");
   const [videoModalItem, setVideoModalItem] = useState<ShortsReviewItem | null>(null);
   const [videoPlaybackRate, setVideoPlaybackRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -39,6 +48,7 @@ export default function VideoReviewPage() {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setReasonModalItem(null);
+        setRejectModalItem(null);
         setVideoModalItem(null);
         return;
       }
@@ -121,6 +131,28 @@ export default function VideoReviewPage() {
     }
   };
 
+  const openRejectModal = (item: ShortsReviewItem) => {
+    setRejectModalItem(item);
+    setRejectReason("POLICY_VIOLATION");
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectModalItem) {
+      return;
+    }
+
+    try {
+      setWorkingId(rejectModalItem.shortsId);
+      await updateShortsStatus(rejectModalItem.shortsId, "REJECT", rejectReason);
+      setRejectModalItem(null);
+      await loadItems();
+    } catch {
+      setErrorMessage("영상 상태 변경에 실패했습니다.");
+    } finally {
+      setWorkingId(null);
+    }
+  };
+
   const pendingCount = items.filter((item) => item.status === "PENDING").length;
   const aiCheckCount = items.filter((item) => item.status === "AI_CHECK").length;
   const publishedCount = items.filter((item) => item.status === "PUBLISHED").length;
@@ -179,16 +211,16 @@ export default function VideoReviewPage() {
             <table className="w-full table-fixed divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">쇼츠ID</th>
-                  <th className="w-[20%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
-                  <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">영상</th>
-                  <th className="w-[11%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
-                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                  <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태 설명</th>
-                  <th className="w-[15%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 결과</th>
-                  <th className="w-[11%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">검수사유</th>
-                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록 시각</th>
-                  <th className="w-[6%] px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
+                  <th className="w-[7%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">쇼츠ID</th>
+                  <th className="w-[16%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">제목</th>
+                  <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">영상</th>
+                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작성자</th>
+                  <th className="w-[9%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                  <th className="w-[10%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태 설명</th>
+                  <th className="w-[12%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">AI 결과</th>
+                  <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">검수사유</th>
+                  <th className="w-[8%] px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록 시각</th>
+                  <th className="w-[12%] px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase">액션</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
@@ -268,7 +300,7 @@ export default function VideoReviewPage() {
                               variant="outline"
                               className="min-w-[52px] whitespace-nowrap"
                               disabled={!hasInspectionResult || workingId === item.shortsId}
-                              onClick={() => void handleStatusUpdate(item.shortsId, "REJECT")}
+                              onClick={() => openRejectModal(item)}
                             >
                               반려
                             </Button>
@@ -336,6 +368,44 @@ export default function VideoReviewPage() {
             <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
               <Button variant="outline" onClick={() => setReasonModalItem(null)}>
                 나가기
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {rejectModalItem ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setRejectModalItem(null)}
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">반려 사유 선택</h2>
+              <p className="mt-1 text-sm text-gray-500">쇼츠ID {rejectModalItem.shortsId}</p>
+            </div>
+            <div className="space-y-2 px-6 py-4">
+              {REJECT_REASON_OPTIONS.map((option) => (
+                <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="shortsRejectReason"
+                    value={option.value}
+                    checked={rejectReason === option.value}
+                    onChange={() => setRejectReason(option.value)}
+                  />
+                  <span className="text-sm text-gray-800">{option.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+              <Button variant="outline" onClick={() => setRejectModalItem(null)} disabled={workingId === rejectModalItem.shortsId}>
+                취소
+              </Button>
+              <Button onClick={() => void handleRejectConfirm()} disabled={workingId === rejectModalItem.shortsId}>
+                {workingId === rejectModalItem.shortsId ? "처리 중..." : "반려 확정"}
               </Button>
             </div>
           </div>

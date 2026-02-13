@@ -6,19 +6,28 @@ import { Input } from "../../components/ui/Input";
 import {
   getCommentReports,
   processCommentReport,
-  rejectCommentReport,
+  deleteCommentReport,
   type CommentReportSearchParams,
 } from "../../domain/comment/api/commentApi";
-import type { CommentReport, ReportStatus } from "../../domain/comment/model/commentTypes";
+import type { CommentDeleteReason, CommentReport, ReportStatus } from "../../domain/comment/model/commentTypes";
 
 const PAGE_SIZE = 20;
+const DELETE_REASON_OPTIONS: { value: CommentDeleteReason; label: string }[] = [
+  { value: "ABUSE", label: "욕설/비하 표현" },
+  { value: "SEXUAL", label: "음란/선정성" },
+  { value: "PERSONAL_INFO", label: "개인정보 노출" },
+  { value: "SPAM", label: "도배/광고" },
+  { value: "ETC", label: "기타 운영정책 위반" },
+];
 
 export default function CommentReportPage() {
   const [reports, setReports] = useState<CommentReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteTargetReportId, setDeleteTargetReportId] = useState<number | null>(null);
+  const [deleteReason, setDeleteReason] = useState<CommentDeleteReason>("ABUSE");
   const [statusFilter, setStatusFilter] = useState<ReportStatus | "ALL">("ALL");
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(0);
@@ -62,33 +71,50 @@ export default function CommentReportPage() {
       await processCommentReport(reportId);
       await loadReports();
     } catch {
-      setErrorMessage("신고 처리에 실패했습니다.");
+      setErrorMessage("댓글 통과 처리에 실패했습니다.");
     } finally {
       setProcessingId(null);
     }
   };
 
-  const handleReject = async (reportId: number) => {
+  const openDeleteModal = (reportId: number) => {
+    setDeleteTargetReportId(reportId);
+    setDeleteReason("ABUSE");
+  };
+
+  const closeDeleteModal = () => {
+    if (deletingId !== null) {
+      return;
+    }
+    setDeleteTargetReportId(null);
+  };
+
+  const handleDelete = async () => {
+    if (deleteTargetReportId === null) {
+      return;
+    }
+
     try {
-      setRejectingId(reportId);
-      await rejectCommentReport(reportId);
+      setDeletingId(deleteTargetReportId);
+      await deleteCommentReport(deleteTargetReportId, deleteReason);
       await loadReports();
+      setDeleteTargetReportId(null);
     } catch {
-      setErrorMessage("신고 반려에 실패했습니다.");
+      setErrorMessage("댓글 삭제 처리에 실패했습니다.");
     } finally {
-      setRejectingId(null);
+      setDeletingId(null);
     }
   };
 
   const pendingCount = reports.filter((report) => report.status === "PENDING").length;
   const processedCount = reports.filter((report) => report.status === "PROCESSED").length;
-  const rejectedCount = reports.filter((report) => report.status === "REJECTED").length;
+  const deletedCount = reports.filter((report) => report.status === "REJECTED").length;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-h1 text-gray-900">댓글 신고 관리</h1>
-        <p className="text-body-reg text-gray-500 mt-2">신고 내역을 조회하고 처리 완료/반려 상태로 변경합니다.</p>
+        <p className="text-body-reg text-gray-500 mt-2">신고 내역을 조회하고 통과/삭제 액션을 처리합니다.</p>
       </div>
 
       {errorMessage ? (
@@ -106,15 +132,15 @@ export default function CommentReportPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>처리 완료</CardTitle>
+            <CardTitle>통과</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-bold">{processedCount}건</CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>반려</CardTitle>
+            <CardTitle>삭제</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-bold">{rejectedCount}건</CardContent>
+          <CardContent className="text-2xl font-bold">{deletedCount}건</CardContent>
         </Card>
       </div>
 
@@ -134,8 +160,8 @@ export default function CommentReportPage() {
             >
               <option value="ALL">전체 상태</option>
               <option value="PENDING">대기</option>
-              <option value="PROCESSED">처리 완료</option>
-              <option value="REJECTED">반려</option>
+              <option value="PROCESSED">통과</option>
+              <option value="REJECTED">삭제</option>
             </select>
 
             <Input
@@ -203,17 +229,17 @@ export default function CommentReportPage() {
                             <Button
                               size="sm"
                               onClick={() => void handleProcess(report.reportId)}
-                              disabled={processingId === report.reportId || rejectingId === report.reportId}
+                              disabled={processingId === report.reportId || deletingId === report.reportId}
                             >
-                              {processingId === report.reportId ? "처리 중..." : "처리 완료"}
+                              {processingId === report.reportId ? "처리 중..." : "통과"}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => void handleReject(report.reportId)}
-                              disabled={processingId === report.reportId || rejectingId === report.reportId}
+                              onClick={() => openDeleteModal(report.reportId)}
+                              disabled={processingId === report.reportId || deletingId === report.reportId}
                             >
-                              {rejectingId === report.reportId ? "반려 중..." : "반려"}
+                              {deletingId === report.reportId ? "삭제 중..." : "삭제"}
                             </Button>
                           </div>
                         ) : (
@@ -246,6 +272,46 @@ export default function CommentReportPage() {
           </div>
         </CardContent>
       </Card>
+
+      {deleteTargetReportId !== null ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/45 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={closeDeleteModal}
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">댓글 삭제 사유 선택</h2>
+              <p className="mt-1 text-sm text-gray-500">신고ID {deleteTargetReportId}에 대한 삭제 사유를 선택해주세요.</p>
+            </div>
+
+            <div className="space-y-2 px-6 py-4">
+              {DELETE_REASON_OPTIONS.map((option) => (
+                <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="deleteReason"
+                    value={option.value}
+                    checked={deleteReason === option.value}
+                    onChange={() => setDeleteReason(option.value)}
+                  />
+                  <span className="text-sm text-gray-800">{option.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+              <Button variant="outline" onClick={closeDeleteModal} disabled={deletingId !== null}>
+                취소
+              </Button>
+              <Button onClick={() => void handleDelete()} disabled={deletingId !== null}>
+                {deletingId !== null ? "삭제 처리 중..." : "삭제 확정"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -268,9 +334,9 @@ function statusLabel(status: ReportStatus): string {
     return "대기";
   }
   if (status === "PROCESSED") {
-    return "처리 완료";
+    return "통과";
   }
-  return "반려";
+  return "삭제";
 }
 
 function statusVariant(status: ReportStatus): "warning" | "success" | "secondary" {

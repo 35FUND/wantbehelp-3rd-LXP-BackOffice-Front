@@ -9,6 +9,7 @@ export interface KeywordItem {
 }
 
 export type ShortsStatus = "PENDING" | "AI_CHECK" | "PUBLISHED" | "REJECT";
+export type ShortsRejectReason = "POLICY_VIOLATION" | "COPYRIGHT" | "SPAM" | "LOW_QUALITY" | "ETC";
 
 export interface ShortsInspectionResult {
   inspectionStatus: string;
