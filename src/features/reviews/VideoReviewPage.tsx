@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
@@ -29,6 +29,7 @@ export default function VideoReviewPage() {
   const [reasonModalItem, setReasonModalItem] = useState<ShortsReviewItem | null>(null);
   const [rejectModalItem, setRejectModalItem] = useState<ShortsReviewItem | null>(null);
   const [rejectReason, setRejectReason] = useState<ShortsRejectReason>("POLICY_VIOLATION");
+  const [expandedStatusDescriptionId, setExpandedStatusDescriptionId] = useState<number | null>(null);
   const [videoModalItem, setVideoModalItem] = useState<ShortsReviewItem | null>(null);
   const [videoPlaybackRate, setVideoPlaybackRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -110,6 +111,9 @@ export default function VideoReviewPage() {
         size: PAGE_SIZE,
       });
       setItems(data.content);
+      setExpandedStatusDescriptionId((currentId) =>
+        data.content.some((item) => item.shortsId === currentId) ? currentId : null
+      );
       setTotalPages(data.totalPages);
       setTotalElements(data.totalElements);
     } catch {
@@ -134,6 +138,10 @@ export default function VideoReviewPage() {
   const openRejectModal = (item: ShortsReviewItem) => {
     setRejectModalItem(item);
     setRejectReason("POLICY_VIOLATION");
+  };
+
+  const toggleStatusDescription = (shortsId: number) => {
+    setExpandedStatusDescriptionId((currentId) => (currentId === shortsId ? null : shortsId));
   };
 
   const handleRejectConfirm = async () => {
@@ -235,78 +243,102 @@ export default function VideoReviewPage() {
                 ) : (
                   items.map((item) => {
                     const hasInspectionResult = Boolean(item.inspectionResult);
+                    const hasStatusDescription = Boolean(item.shortsStatusDescription?.trim());
+                    const isStatusDescriptionExpanded = expandedStatusDescriptionId === item.shortsId;
 
                     return (
-                      <tr key={item.shortsId} className="hover:bg-gray-50 align-top">
-                        <td className="px-3 py-3 text-sm text-gray-700">{item.shortsId}</td>
-                        <td className="px-3 py-3 text-sm font-medium text-gray-900">
-                          <p className="truncate" title={item.title}>{item.title}</p>
-                        </td>
-                        <td className="px-3 py-3 text-sm text-gray-700">
-                          {item.videoUrl ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="whitespace-nowrap"
-                              onClick={() => openVideoModal(item)}
-                            >
-                              영상 보기
-                            </Button>
-                          ) : (
-                            "-"
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-sm text-gray-700">{item.authorName ?? "-"}</td>
-                        <td className="px-3 py-3 text-sm">
-                          <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
-                        </td>
-                        <td className="px-3 py-3 text-sm text-gray-700">
-                          <p className="break-words" title={item.shortsStatusDescription ?? "-"}>
-                            {item.shortsStatusDescription ?? "-"}
-                          </p>
-                        </td>
-                        <td className="px-3 py-3 text-sm text-gray-700">
-                          {hasInspectionResult
-                            ? `${item.inspectionResult?.category ?? "-"} (${((item.inspectionResult?.confidenceScore ?? 0) * 100).toFixed(1)}%)`
-                            : "검수 대기"}
-                        </td>
-                        <td className="px-3 py-3 text-sm text-gray-700">
-                          {hasInspectionResult ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="whitespace-nowrap"
-                              onClick={() => setReasonModalItem(item)}
-                            >
-                              사유 보기
-                            </Button>
-                          ) : (
-                            <span className="text-xs text-gray-400">AI 검수 완료 후 확인 가능</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-3 text-sm text-gray-700">{formatDate(item.createdAt)}</td>
-                        <td className="px-3 py-3 text-right">
-                          <div className="inline-flex flex-wrap justify-end gap-2">
-                            <Button
-                              size="sm"
-                              className="min-w-[52px] whitespace-nowrap"
-                              disabled={!hasInspectionResult || workingId === item.shortsId}
-                              onClick={() => void handleStatusUpdate(item.shortsId, "PUBLISHED")}
-                            >
-                              게시
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="min-w-[52px] whitespace-nowrap"
-                              disabled={!hasInspectionResult || workingId === item.shortsId}
-                              onClick={() => openRejectModal(item)}
-                            >
-                              반려
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
+                      <Fragment key={item.shortsId}>
+                        <tr key={item.shortsId} className="hover:bg-gray-50 align-top">
+                          <td className="px-3 py-3 text-sm text-gray-700">{item.shortsId}</td>
+                          <td className="px-3 py-3 text-sm font-medium text-gray-900">
+                            <p className="truncate" title={item.title}>{item.title}</p>
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-700">
+                            {item.videoUrl ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="whitespace-nowrap"
+                                onClick={() => openVideoModal(item)}
+                              >
+                                영상 보기
+                              </Button>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-700">{item.authorName ?? "-"}</td>
+                          <td className="px-3 py-3 text-sm">
+                            <Badge variant={statusVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-700">
+                            {hasStatusDescription ? (
+                              <button
+                                type="button"
+                                className="text-sm font-medium text-primary hover:text-primary-dark"
+                                onClick={() => toggleStatusDescription(item.shortsId)}
+                              >
+                                {isStatusDescriptionExpanded ? "설명 닫기" : "설명 보기"}
+                              </button>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-700">
+                            {hasInspectionResult
+                              ? `${item.inspectionResult?.category ?? "-"} (${((item.inspectionResult?.confidenceScore ?? 0) * 100).toFixed(1)}%)`
+                              : "검수 대기"}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-700">
+                            {hasInspectionResult ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="whitespace-nowrap"
+                                onClick={() => setReasonModalItem(item)}
+                              >
+                                사유 보기
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-gray-400">AI 검수 완료 후 확인 가능</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-700">{formatDate(item.createdAt)}</td>
+                          <td className="px-3 py-3 text-right">
+                            <div className="inline-flex flex-wrap justify-end gap-2">
+                              <Button
+                                size="sm"
+                                className="min-w-[52px] whitespace-nowrap"
+                                disabled={!hasInspectionResult || workingId === item.shortsId}
+                                onClick={() => void handleStatusUpdate(item.shortsId, "PUBLISHED")}
+                              >
+                                게시
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="min-w-[52px] whitespace-nowrap"
+                                disabled={!hasInspectionResult || workingId === item.shortsId}
+                                onClick={() => openRejectModal(item)}
+                              >
+                                반려
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isStatusDescriptionExpanded ? (
+                          <tr key={`${item.shortsId}-status-description`} className="bg-gray-50">
+                            <td colSpan={10} className="px-4 py-4">
+                              <div className="rounded-md border border-gray-200 bg-white px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">상태 설명</p>
+                                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
+                                  {item.shortsStatusDescription}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
                     );
                   })
                 )}
